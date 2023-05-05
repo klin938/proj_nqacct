@@ -1,13 +1,20 @@
 import os, sys, argparse,logging
 
 from config.definitions import LOG_FORMATTER
+from config.definitions import PRELOAD_USER_DEPARTMENTS
+from config.definitions import PRELOAD_USER_MANAGERS
 from nqacct.common.utils import valid_path
 import nqacct.qacct2dict.builder as dict_builder
 import nqacct.reporting.df_reporter as reporter
 
 def main(argv):
     print('args=%s' % args)
-    dict_builder.init(args.input, args.groupby, args.grouplist, args.period, args.years)
+    if args.groupby == 'ad_dept':
+        dict_builder.init(args.input, args.groupby, args.grouplist, args.period, args.years, PRELOAD_USER_DEPARTMENTS)
+    elif args.groupby == 'ad_manager':
+        dict_builder.init(args.input, args.groupby, args.grouplist, args.period, args.years, PRELOAD_USER_MANAGERS)
+    else:
+        dict_builder.init(args.input, args.groupby, args.grouplist, args.period, args.years, None)
     data = dict_builder.build()
     logger.debug('Criteria: groupby-{} | {} | {}'.format(dict_builder.groupby,dict_builder.grouplist,dict_builder.years))
     reporter.init(data)
