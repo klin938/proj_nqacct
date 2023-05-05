@@ -116,14 +116,18 @@ def criteria_check(group, username, jobnumber, time_stamp):
      elif this.groupby == "group":
           grp = group
      elif this.groupby == "ad_manager":
-          pass
-          ## TODO
-          ## grp = search_ad_mgr(username, grouplist)
+          if username not in this.checked_groups:
+               grp = search_for_manager(username)
+               this.checked_groups[username] = grp
+               logger.debug("Resolved ({} {} {} {}): AD Manager - {}".format(jobnumber, username, group, dt.year, this.checked_groups[username]))
+          else:
+               grp = this.checked_groups[username]
+     # TODO if search for AD department return nothing, just use the SGE captured group.
      elif this.groupby == "ad_dept":
           if username not in this.checked_groups:
                grp = ldap_helper.get_user_department(username)
                this.checked_groups[username] = grp
-               logger.debug("Rectified ({} {} {} {}): AD Department - {}".format(jobnumber, username, group, dt.year, this.checked_groups[username]))
+               logger.debug("Resolved ({} {} {} {}): AD Department - {}".format(jobnumber, username, group, dt.year, this.checked_groups[username]))
           else:
                grp = this.checked_groups[username]
      else:
@@ -134,6 +138,22 @@ def criteria_check(group, username, jobnumber, time_stamp):
      else:
           logger.debug("Dropped ({} {} {} {}): {} [{}] not found in {}".format(jobnumber, username, group, dt.year, this.groupby, grp, this.grouplist))
           return False
+
+# If a grouplist (a list of specific managers) is not given, then use the direct manager. 
+# Otherwise, go thru the management chain and try to get the closest manager who is specified
+# in the grouplist. If non above, just use direct manager.
+#
+# Just a note that, the user is the first item in the management chain, this is required in
+# the case that the grouplist manager is also the actual user.
+def search_for_manager(username):
+     chain = ldap_helper.get_user_management_chain(username)
+     logger.debug('Username: {} | Management Chain: {}'.format(username,chain))
+     if this.grouplist is None:
+          return chain[1]
+     for manager in chain:
+          if manager in this.grouplist:
+               return manager
+     return chain[1]
 
 # This dedicated method allows us to create some "foobar" data easily (if needed)
 def add_to_data(group,username,jobnumber,submission_time,
@@ -154,4 +174,4 @@ def add_to_data(group,username,jobnumber,submission_time,
      data['cpu'].append(cpu)
      data['cpuhours'].append(cpuhours)
 
-     logger.debug("Ingested ({} {} {} {}): SLOTS: {} WC: {} CPU: {} CPUHOURS: {}".format(jobnumber, username, group, submission_time, slots, wallclock, cpu, cpuhours))
+     #logger.debug("Ingested ({} {} {} {}): SLOTS: {} WC: {} CPU: {} CPUHOURS: {}".format(jobnumber, username, group, submission_time, slots, wallclock, cpu, cpuhours))
